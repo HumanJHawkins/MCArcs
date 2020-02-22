@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <title>Minecraft Arcs</title>
     <script src="../js/mcArcs.js"></script>
+    <style>
+        body {
+            font-family: "Courier New", monospace;
+        }
+    </style>
 </head>
 <body onload="newInstance()">
 <div id="wholePage">
@@ -13,6 +18,7 @@
         </canvas>
     </div>
     <div id="input">
+        <label for="radius">Radius: </label>
         <input id="radius" name="radius" type="number" value="14" oninput="newInstance() ">
     </div>
     <div id="data">

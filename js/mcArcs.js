@@ -3,7 +3,7 @@ let theContext;
 let windowHeight;
 let windowWidth;
 let resultArray;
-let radius
+let radius;
 
 function newInstance(){
     radius = document.getElementById("radius").value;
@@ -39,8 +39,6 @@ function draw() {
     theContext.translate(theCanvas.width/2, theCanvas.height/2);
     theContext.lineWidth = "1";
 
-   // alert(resultArray.toString());
-
     if(resultArray) {
         for(let i = 0; i < resultArray.length; i++) {
             squareAt(resultArray[i]);
@@ -54,9 +52,6 @@ function draw() {
     theContext.beginPath();
     theContext.arc(0, 0, radius*20, 0, 2 * Math.PI);
     theContext.stroke();
-
-
-
 }
 
 function squareAt(point) {
@@ -72,19 +67,14 @@ function squareAt(point) {
     theContext.lineTo(x+boxAdjust, y-boxAdjust);
     theContext.lineTo(x-boxAdjust, y-boxAdjust);
     theContext.stroke();
-
 }
 
 function getFirstEighth(radius){
-    let htmlOutput = "<p>Radius: " + radius + "</p>";
+    let htmlOutput = "";
     let curX = 0;
     let curY = radius;
     let startPoint = [curX, curY];
     let endPoint = rotatePointInt(0,0,startPoint[0],startPoint[1],45);
-
-    htmlOutput += "<p>X: " + curX + "  Y: " + curY + "  Delta Radius at Y: " +
-        Math.abs(radius - getDistance(0,0, curX, curY)) + " Delta Radius at Y-1: " +
-        Math.abs(radius - getDistance(0,0, curX,curY - 1)) + "</p>";
 
     resultArray = [startPoint];
     resultArray[endPoint[0]] = endPoint;
@@ -93,9 +83,11 @@ function getFirstEighth(radius){
         let deltaYMinusZero = Math.abs(radius - getDistance(0,0, curX, curY));
         let deltaYMinusOne  = Math.abs(radius - getDistance(0,0, curX,curY - 1));
 
-        htmlOutput += "<p>X: " + curX + "  Y: " + curY + "  Delta Radius at Y: " +
-            Math.abs(radius - getDistance(0,0, curX, curY)) + " Delta Radius at Y-1: " +
-            Math.abs(radius - getDistance(0,0, curX,curY - 1)) + "</p>";
+        htmlOutput += "<p>X: " + curX + "  Y: " + curY +
+            "</p><p><dd>Delta Radius at Y0: " +
+               parseFloat(Math.abs(radius - getDistance(0,0, curX, curY))).toFixed(4) +
+            "</p><p>Delta Radius at Y1: " +
+               parseFloat(Math.abs(radius - getDistance(0,0, curX,curY - 1))).toFixed(4) + "</dd></p>";
 
         // if one lower than Y is closer to the radius, make that the current Y
         if(deltaYMinusOne < deltaYMinusZero){
