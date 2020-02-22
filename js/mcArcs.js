@@ -2,16 +2,17 @@ let theCanvas;
 let theContext;
 let windowHeight;
 let windowWidth;
-let resultArray;
+let canvasSize;
+let drawAreaSize;
+let gridExtent;
+let gridSize;
+let arcArray;
 let radius;
 
 function newInstance(){
     radius = document.getElementById("radius").value;
     // alert(getDistance(0,0,0,6));
-    getFirstEighth(radius);
-    topEighthToQuarter();
-    quarterToHalf();
-    halfToFull();
+    arcArray = getCircleArray(radius);
     handleDisplaySize();
 }
 
@@ -20,137 +21,167 @@ function handleDisplaySize() {
     //   best made based on actual pixel count, or aspect ratio.
     windowWidth = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
     windowHeight = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+    if(windowWidth < windowHeight) {
+        canvasSize = windowWidth * 0.95;
+    } else {
+        canvasSize = windowHeight * 0.95;
+    }
+    drawAreaSize = canvasSize * 0.95;
+    gridExtent = drawAreaSize / 2;
+    gridSize = drawAreaSize / (2 * radius + 2);
+
     handleDisplayRefresh();
 }
 
 function handleDisplayRefresh() {
-    // Create canvas in new divs before continuing
-    theCanvas = document.getElementById("arcCanvas");
-    theContext = theCanvas.getContext("2d");
-    theCanvas.width = 1000;
-    theCanvas.height = 1000;
-    theCanvas.style.background = "lightblue";
-    draw();
+    drawCanvas();
+    drawGrid();
+    drawGridCircle(arcArray);
 }
 
-function draw() {
+function drawCanvas(gridsize) {
+    theCanvas   = document.getElementById("arcCanvas");
+    theContext  = theCanvas.getContext("2d");
+    theCanvas.width     = canvasSize;
+    theCanvas.height    = canvasSize;
+    theCanvas.style.background = "#FBFBFF";
     theContext.restore();
     theContext.clearRect(0, 0, theCanvas.width, theCanvas.height);
     theContext.translate(theCanvas.width/2, theCanvas.height/2);
     theContext.lineWidth = "1";
+}
 
-    if(resultArray) {
-        for(let i = 0; i < resultArray.length; i++) {
-            squareAt(resultArray[i]);
-        }
+function drawGrid() {
+    theContext.strokeStyle = "lightgray";
+    theContext.beginPath();
+    // theContext.moveTo(-gridExtent, 0);
+    // theContext.lineTo( gridExtent, 0);
+    // theContext.moveTo(0, -gridExtent);
+    // theContext.lineTo( 0, gridExtent);
 
-        squareAt([0,0]);
+    for(let i = gridSize / 2; i <= gridExtent; i += gridSize) {
+        theContext.moveTo(-gridExtent, i);
+        theContext.lineTo( gridExtent, i);
+        theContext.moveTo(-gridExtent, -i);
+        theContext.lineTo( gridExtent, -i);
+        theContext.moveTo(i, -gridExtent);
+        theContext.lineTo(i, gridExtent);
+        theContext.moveTo(-i, -gridExtent);
+        theContext.lineTo(-i, gridExtent);
     }
+    theContext.stroke();
+}
+
+function drawGridCircle(circleArray) {
+    drawGridArc(circleArray, 0, 360)
+}
+
+function drawGridArc(circleArray, startDegree, endDegree) {
+    startDegree = startDegree || 0;
+    endDegree = endDegree || 360;
+    let startPoint = [];
+    let endPoint = [];
 
     // Light circle line
-    theContext.strokeStyle = "gray";
+    theContext.strokeStyle = "red";
     theContext.beginPath();
-    theContext.arc(0, 0, radius*20, 0, 2 * Math.PI);
+    theContext.arc(0, 0, radius*gridSize, 0, 2 * Math.PI);
+    theContext.stroke();
+
+    if(circleArray) {
+        for(let i = 0; i < circleArray.length; i++) {
+            squareAt(circleArray[i]);
+        }
+        squareAt([0,0], "red");
+    }
+}
+
+function squareAt(p, color) {
+    color = color || "black";
+
+    let sizeAdjust = gridSize/2;
+    p[0] *= gridSize;
+    p[1] *= -gridSize;
+
+    theContext.strokeStyle = color;
+    theContext.beginPath();
+    theContext.moveTo(p[0]-sizeAdjust, p[1]-sizeAdjust);
+    theContext.lineTo(p[0]-sizeAdjust, p[1]+sizeAdjust);
+    theContext.lineTo(p[0]+sizeAdjust, p[1]+sizeAdjust);
+    theContext.lineTo(p[0]+sizeAdjust, p[1]-sizeAdjust);
+    theContext.lineTo(p[0]-sizeAdjust, p[1]-sizeAdjust);
     theContext.stroke();
 }
 
-function squareAt(point) {
-    let multiplier = 20;
-    let boxAdjust = multiplier/2;
-    let x = point[0] * multiplier;
-    let y = point[1] * -multiplier;
+function getCircleArray(radius){
+    let currentX = 0;
+    let currentY = radius;
 
-    theContext.beginPath();
-    theContext.moveTo(x-boxAdjust, y-boxAdjust);
-    theContext.lineTo(x-boxAdjust, y+boxAdjust);
-    theContext.lineTo(x+boxAdjust, y+boxAdjust);
-    theContext.lineTo(x+boxAdjust, y-boxAdjust);
-    theContext.lineTo(x-boxAdjust, y-boxAdjust);
-    theContext.stroke();
-}
+    // The first point (element 0) of our 1/8th circle arc is is always (0, radius).
+    let circleArray = [currentX, currentY];
+    let endPoint = rotatePointInt([0,0], circleArray,45);
 
-function getFirstEighth(radius){
-    let htmlOutput = "";
-    let curX = 0;
-    let curY = radius;
-    let startPoint = [curX, curY];
-    let endPoint = rotatePointInt(0,0,startPoint[0],startPoint[1],45);
 
-    resultArray = [startPoint];
-    resultArray[endPoint[0]] = endPoint;
+    // The last point of our 1/8th circle arc is the closest integer point to a 45 degree rotation of the first point.
+    // It's x-value will also be it's element position in our array, as each x-value of this arc segment can only have
+    //   one point.
+    circleArray[endPoint[0]] = endPoint;
 
-    while(curX < endPoint[0]){
-        let deltaYMinusZero = Math.abs(radius - getDistance(0,0, curX, curY));
-        let deltaYMinusOne  = Math.abs(radius - getDistance(0,0, curX,curY - 1));
-
-        htmlOutput += "<p>X: " + curX + "  Y: " + curY +
-            "</p><p><dd>Delta Radius at Y0: " +
-               parseFloat(Math.abs(radius - getDistance(0,0, curX, curY))).toFixed(4) +
-            "</p><p>Delta Radius at Y1: " +
-               parseFloat(Math.abs(radius - getDistance(0,0, curX,curY - 1))).toFixed(4) + "</dd></p>";
-
-        // if one lower than Y is closer to the radius, make that the current Y
-        if(deltaYMinusOne < deltaYMinusZero){
-            curY--;
+    // For each x-value through 1/8th of the circle, the y-value will be either the same, or one less than the previous
+    //   point's y-value. Between these two, use the y-value that is closest to the radius of the circle.
+    while(currentX <= endPoint[0]){
+        if(Math.abs(radius - getDistance(0,0, currentX,currentY - 1))
+            < Math.abs(radius - getDistance(0,0, currentX, currentY))){
+            currentY--;
         }
 
-        resultArray[curX] = [curX, curY];
-        curX++;
+        // alert("Y-1: " + Math.abs(radius - getDistance(0,0, currentX,currentY - 1)) +
+        //     "\nY-0: " +Math.abs(radius - getDistance(0,0, currentX, currentY)));
+        //
+        circleArray[currentX] = [currentX, currentY];
+        currentX++;
     }
 
-    // Clean up blocky 1/8th corner.
-    let lastElement = resultArray.length-1;
-    if(resultArray[lastElement][1] === resultArray[lastElement-1][1]) {
-        resultArray.pop();
-    } else if(resultArray[lastElement-1][1] - resultArray[lastElement][1] === 2){
-        resultArray[lastElement][1]++;
+    // Create the rest of the circle from our 1/8th circle arc-segment.
+    // Keep all points in clockwise-order to allow easy cutting of arc-segments from the array.
+    let lastElement = circleArray.length - 1;
+    for(let i = 0; i < lastElement; i++) {  // 1/8 --> 1/4: Skip first element, to avoid duplicates on next copy.
+        circleArray[lastElement+1+i] = [circleArray[lastElement-i][1], circleArray[lastElement-i][0]];
     }
 
-    document.getElementById("data").innerHTML = htmlOutput;
-}
-
-// Based on https://stackoverflow.com/questions/17410809/how-to-calculate-rotation-in-2d-in-javascript
-function rotatePointInt(cx, cy, x, y, angle) {
-    let radians = (Math.PI / 180) * angle,
-        cos = Math.cos(radians),
-        sin = Math.sin(radians),
-        nx = (cos * (x - cx)) + (sin * (y - cy)) + cx,
-        ny = (cos * (y - cy)) - (sin * (x - cx)) + cy;
-    return [Math.round(nx), Math.round(ny)];
-}
-
-function getDistance(pointAx, pointAy, pointBx, pointBy) {
-    return Math.sqrt(
-        Math.pow(pointBx - pointAx,2) + Math.pow(pointBy - pointAy,2)
-    );
-}
-
-function topEighthToQuarter() {
-    let appendArray = [];
-    if(resultArray) {
-        for(let i = resultArray.length-1; i >= 0; i--) {
-            appendArray[i] = [resultArray[i][1], resultArray[i][0]];
-        }
-        resultArray = resultArray.concat(appendArray);
+    // Some squares at 45 degrees are unnecessary because the squares on either side connect at a point. Remove these.
+    if(circleArray[lastElement][1] === circleArray[lastElement-1][1]
+        && circleArray[lastElement][0] === circleArray[lastElement+1][0]) {
+        circleArray.splice(lastElement, 2);
     }
+
+    let segmentLength = circleArray.length;
+    for(let i = 0; i < segmentLength; i++) {
+        circleArray[segmentLength+i] = rotatePointInt([0,0], circleArray[i], 90);
+        circleArray[segmentLength*2+i] = rotatePointInt([0,0], circleArray[i], 180);
+        circleArray[segmentLength*3+i] = rotatePointInt([0,0], circleArray[i], 270);
+    }
+    return circleArray;
 }
 
-function quarterToHalf() {
-    let appendArray = [];
-    if(resultArray) {
-        for(let i = 0; i < resultArray.length; i++) {
-            appendArray[i] = [resultArray[i][0], -resultArray[i][1]];
-        }
-        resultArray = resultArray.concat(appendArray);
-    }
+
+function rotatePoint(c, p, angle) {
+    let radians = (Math.PI / 180) * angle;
+    let cos = Math.cos(radians);
+    let sin = Math.sin(radians);
+    return [
+        (cos * (p[0] - c[0])) + (sin * (p[1] - c[1])) + c[0],
+        (cos * (p[1] - c[1])) - (sin * (p[0] - c[0])) + c[1]
+    ];
+}
+function rotatePointInt(c, p, angle) {
+    let n = rotatePoint(c, p, angle);
+    return [
+        Math.round(n[0]),
+        Math.round(n[1])
+    ];
 }
 
-function halfToFull() {
-    let appendArray = [];
-    if(resultArray) {
-        for(let i = 0; i < resultArray.length; i++) {
-            appendArray[i] = [-resultArray[i][0], resultArray[i][1]];
-        }
-        resultArray = resultArray.concat(appendArray);
-    }
+function getDistance(x1, y1, x2, y2) {
+    return Math.sqrt(Math.pow(x2 - x1,2) + Math.pow(y2 - y1,2));
 }
