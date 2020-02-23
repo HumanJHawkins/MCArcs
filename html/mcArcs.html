@@ -10,14 +10,14 @@
         }
     </style>
 </head>
-<body onload="newInstance()">
+<body onload="doIt()" onresize="doIt()">
 <div id="divCanvas">
     <canvas id="arcCanvas">
     </canvas>
 </div>
 <div id="input">
     <label for="radius">Radius: </label>
-    <input id="radius" name="radius" type="number" min="0" value="2" oninput="newInstance() ">
+    <input id="radius" name="radius" type="number" min="0" value="2" oninput="doIt() ">
 </div>
 <div id="data">
 </div>

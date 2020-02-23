@@ -9,37 +9,72 @@ let gridSize;
 let arcArray;
 let radius;
 
-function newInstance() {
+function doIt() {
     radius = document.getElementById("radius").value;
-    // alert(getDistance(0,0,0,6));
     arcArray = getCircleArray(radius);
-    handleDisplaySize();
+    document.getElementById("data").innerHTML = getCircleHTML(arcArray);
+    onDisplaySize();
 }
 
-function handleDisplaySize() {
+function getCircleHTML(circleArray) {
+    let longest = lengthLongestNumber(circleArray);
+    let html = "<pre>";
+    for(let i = 0; i< circleArray.length; i++) {
+        html += "setblock " +
+            formatCoordinate(circleArray[i][0],longest) +
+            " ~-1 " +
+            formatCoordinate(circleArray[i][1],longest) +
+            " minecraft:stone<br />";
+    }
+    html += "<br /></pre>";
+    return html;
+}
+
+function formatCoordinate(number, length){
+    let result = "000000000" + Math.abs(number);
+    if(number < 0){
+        result = "~-" + result.substr(result.length - (length - 1));
+    } else {
+        result = " ~" + result.substr(result.length - (length - 1));
+    }
+    return result;
+}
+
+function lengthLongestNumber(array2d) {
+    let longest = 0;
+    for(let i = 0; i < array2d.length; i++){
+        for(let j = 0; j < array2d[i].length; j++){
+            if(array2d[i][j].toString().length > longest) {
+                longest = array2d[i][j].toString().length;
+            }
+        }
+    }
+    return longest;
+}
+function onDisplaySize() {
     // Window dimensions in pixels. Although we use view width for almost everything, most decisions about layout are
     //   best made based on actual pixel count, or aspect ratio.
     windowWidth = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
     windowHeight = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
     if (windowWidth < windowHeight) {
-        canvasSize = windowWidth * 0.95;
+        canvasSize = windowWidth * 0.75;
     } else {
-        canvasSize = windowHeight * 0.95;
+        canvasSize = windowHeight * 0.75;
     }
     drawAreaSize = canvasSize * 0.95;
     gridExtent = drawAreaSize / 2;
     gridSize = drawAreaSize / (2 * radius + 2);
 
-    handleDisplayRefresh();
+    drawScreen();
 }
 
-function handleDisplayRefresh() {
+function drawScreen() {
     drawCanvas();
     drawGrid();
     drawGridCircle(arcArray);
 }
 
-function drawCanvas(gridsize) {
+function drawCanvas() {
     theCanvas = document.getElementById("arcCanvas");
     theContext = theCanvas.getContext("2d");
     theCanvas.width = canvasSize;
@@ -121,7 +156,6 @@ function getCircleArray(radius) {
     let circleArray = [currentX, currentY];
     let endPoint = rotatePointInt([0, 0], circleArray, 45);
 
-
     // The last point of our 1/8th circle arc is the closest integer point to a 45 degree rotation of the first point.
     // It's x-value will also be it's element position in our array, as each x-value of this arc segment can only have
     //   one point.
@@ -145,14 +179,20 @@ function getCircleArray(radius) {
     // Create the rest of the circle from our 1/8th circle arc-segment.
     // Keep all points in clockwise-order to allow easy cutting of arc-segments from the array.
     let lastElement = circleArray.length - 1;
-    for (let i = 0; i < lastElement; i++) {  // 1/8 --> 1/4: Skip first element, to avoid duplicates on next copy.
-        circleArray[lastElement + 1 + i] = [circleArray[lastElement - i][1], circleArray[lastElement - i][0]];
+    for (let i = 0; i < lastElement; i++) {
+        circleArray[lastElement + i + 1] = [circleArray[lastElement - i][1], circleArray[lastElement - i][0]];
     }
 
     // Some squares at 45 degrees are unnecessary because the squares on either side connect at a point. Remove these.
     if (circleArray[lastElement][1] === circleArray[lastElement - 1][1]
         && circleArray[lastElement][0] === circleArray[lastElement + 1][0]) {
         circleArray.splice(lastElement, 2);
+    }
+
+    // If a block was right at 45degrees, it will have been duplicated. Remove the extra.
+    if (circleArray[lastElement][0] === circleArray[lastElement + 1][0]
+        && circleArray[lastElement][1] === circleArray[lastElement + 1][1]) {
+        circleArray.splice(lastElement, 1);
     }
 
     let segmentLength = circleArray.length;
