@@ -4,6 +4,7 @@
 // - Currently using "closest square" algorithm. I am notising that it might be better to round corners more by
 //     measuring area away from the circle... Two squares close to the line may be replaced by one that is slightly
 //     further away, for a better overall appearance.
+// - Why are my rotates points off by tiny fraction, and why doesn't .toFixed correct them?
 
 let windowHeight;
 let windowWidth;
@@ -111,7 +112,7 @@ function getPoint(i) {
 function addPointMetadata(p) {
     let distance = getDistance([0, 0], p) - radius;
     let angle = getAngle([0, 0], p);
-    return [p[0], p[1], distance, angle];
+    return [p[0], p[1], distance.toFixed(3), angle.toFixed(3)];
 }
 
 
@@ -249,16 +250,16 @@ function drawGridCircle(circleArray) {
 }
 
 function drawGridArc(circleArray, startDegree, endDegree) {
-    startDegree = startDegree || 0;
-    endDegree = endDegree || 360;
-    let startPoint = [];
-    let endPoint = [];
-
-    if (circleArray) {
-        for (let i = 0; i < circleArray.length; i++) {
-            squareAt(circleArray[i]);
-        }
-    }
+    // startDegree = startDegree || 0;
+    // endDegree = endDegree || 360;
+    // let startPoint = [];
+    // let endPoint = [];
+    //
+    // if (circleArray) {
+    //     for (let i = 0; i < circleArray.length; i++) {
+    //         squareAt(circleArray[i]);
+    //     }
+    // }
 }
 
 function squareAt(p, color) {
