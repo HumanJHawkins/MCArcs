@@ -4,7 +4,6 @@
 // - Currently using "closest square" algorithm. I am notising that it might be better to round corners more by
 //     measuring area away from the circle... Two squares close to the line may be replaced by one that is slightly
 //     further away, for a better overall appearance.
-// - Why are my rotates points off by tiny fraction, and why doesn't .toFixed correct them?
 
 let windowHeight;
 let windowWidth;
@@ -112,7 +111,7 @@ function getPoint(i) {
 function addPointMetadata(p) {
     let distance = getDistance([0, 0], p) - radius;
     let angle = getAngle([0, 0], p);
-    return [p[0], p[1], distance.toFixed(3), angle.toFixed(3)];
+    return [p[0], p[1], distance, angle];
 }
 
 
@@ -120,11 +119,11 @@ function getCircleHTML(circleArray) {
     // let longest = lengthLongestNumber(circleArray);
     let html = "<pre>";
     for (let i = 0; i < circleArray.length; i++) {
-        html += "" + i +
-            "   x: " + circleArray[i][0] +
-            "   y: " + circleArray[i][1] +
-            "   d: " + circleArray[i][2] +
-            "   a: " + circleArray[i][3] + "<br />";
+        html += ("" + i).padStart(3,"0") + ":" +
+            "  x: " + circleArray[i][0].toFixed(1) +
+            "  y: " + circleArray[i][1].toFixed(1) +
+            "  d: " + circleArray[i][2].toFixed(2) +
+            "  a: " + circleArray[i][3].toFixed(2) + "<br />";
 
 
         // html += "setblock " +
@@ -250,16 +249,16 @@ function drawGridCircle(circleArray) {
 }
 
 function drawGridArc(circleArray, startDegree, endDegree) {
-    // startDegree = startDegree || 0;
-    // endDegree = endDegree || 360;
-    // let startPoint = [];
-    // let endPoint = [];
-    //
-    // if (circleArray) {
-    //     for (let i = 0; i < circleArray.length; i++) {
-    //         squareAt(circleArray[i]);
-    //     }
-    // }
+    startDegree = startDegree || 0;
+    endDegree = endDegree || 360;
+    let startPoint = [];
+    let endPoint = [];
+
+    if (circleArray) {
+        for (let i = 0; i < circleArray.length; i++) {
+            squareAt(circleArray[i]);
+        }
+    }
 }
 
 function squareAt(p, color) {
@@ -268,11 +267,6 @@ function squareAt(p, color) {
     let sizeAdjust = gridSize / 2;
     p[0] *= gridSize;
     p[1] *= -gridSize;
-
-    // if (gridOffset[0]) {
-    //     if (p[0] >= 0) p[0] -= sizeAdjust; else p[0] += sizeAdjust;
-    //     if (p[1] > 0) p[1] -= sizeAdjust; else p[1] += sizeAdjust;
-    // }
 
     theContext.strokeStyle = color;
     theContext.beginPath();
@@ -361,3 +355,9 @@ function alertArray(arr2d) {
     alert(output);
 }
 
+function roundTo(n, precision) {
+    // precision is how precise the result will be. for rounding to the nearest 10, enter 10.
+    //   To the nearest .001, enter .001. Can also enter arbitrary intervals such as 3.
+    precision = precision || 1;
+    return n + precision/2 - ((n + precision/2) % precision);
+}
