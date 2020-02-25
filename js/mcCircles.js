@@ -1,9 +1,7 @@
 // To DO:
-// - getCircleArray() is duplicating squares when they are right on the 45 and do not transpose to a different location.
-//     (works fine, but will make extra command rows.)
-// - Currently using "closest square" algorithm. I am notising that it might be better to round corners more by
-//     measuring area away from the circle... Two squares close to the line may be replaced by one that is slightly
-//     further away, for a better overall appearance.
+// - Area not being calculated for squares where one lower point is above the circle.
+// - Area inside done. Just need to subtract from one to get area outside.
+//     Then produce inside and outside quality scores.
 
 let windowHeight;
 let windowWidth;
@@ -70,27 +68,64 @@ function getCircleArray() {
         circleArray.pop();
     }
 
+    circleArray = transposeEighth(circleArray);
+    circleArray = mirror(circleArray, "Y");
+    circleArray = mirror(circleArray, "X");
+    return circleArray;
+}
+
+function mirror(arr, doXYO) {
+    // doXYO is mirror across X, Y, or Origin
+    let last = arr.length-1;
+    if (!oddDiameter) {
+        for (let i = last; i >= 0; i--) {
+            arr[last+(last-i)+1] = mirrorPoint(arr[i], doXYO);
+        }
+    } else {
+        // Kluge alert: Ugly, but works. Be careful messing with this
+        if(doXYO === "Y") arr[2*last] = mirrorPoint(arr[0], doXYO); // needed 1/4 of the time. Harmless the other 3.
+        let j = 1;
+        for (let i = last-1; i > 0; i--) {
+            arr[last+j] = mirrorPoint(arr[i], doXYO);
+            j++;
+        }
+    }
+    return arr;
+}
+
+function mirrorPoint(p, doXYO) {
+    // doXYO is mirror across X, Y, or Origin
+    let temp = p.slice(0);  // Make a copy, as it is an object passed by reference.
+    switch (doXYO) {
+        case "X":
+            temp[0] = -temp[0];
+            break;
+        case "Y":
+            temp[1] = -temp[1];
+            break;
+        case "O":
+            temp = mirrorPoint(mirrorPoint(temp, "X"), "Y");
+    }
+    // Update the angle. It is the only data that is different based on mirroring.
+    temp[3] = getAngle([0,0], temp);
+    return temp;
+}
+
+function transposeEighth(arr) {
     // Transpose the 1/8th to make a 1/4.
     // Keep all points in clockwise-order to allow easy cutting of arc-segments from the array.
-    let lastElement = circleArray.length - 1;
-    for (let i = 0; i <= lastElement; i++) {
-        circleArray[lastElement + i + 1] =
-            addPointMetadata([circleArray[lastElement - i][1], circleArray[lastElement - i][0]]);
+    let last = arr.length - 1;
+    for (let i = 0; i <= last; i++) {
+        arr[last + i + 1] =
+            [arr[last - i][1], arr[last - i][0],
+             arr[last - i][2],
+             getAngle([0,0], [arr[last - i][1], arr[last - i][0]]), // updated angle
+             arr[last - i][4]];
     }
 
-    // Rotate the quarter (x3) to make a circle.
-    // For odd diameters, we will be one too long.
-    if (oddDiameter) {
-        circleArray.pop();
-    }
-
-    let segmentLength = circleArray.length;
-    for (let i = 0; i < segmentLength; i++) {
-        circleArray[segmentLength + i] = addPointMetadata(rotatePointInt([0, 0], circleArray[i], 90));
-        circleArray[segmentLength * 2 + i] = addPointMetadata(rotatePointInt([0, 0], circleArray[i], 180));
-        circleArray[segmentLength * 3 + i] = addPointMetadata(rotatePointInt([0, 0], circleArray[i], 270));
-    }
-    return circleArray;
+    // If our last element was at the 45, clean up the extra copy.
+    if(arr[last][0] === arr[last][1]) { arr.splice(last, 1); }
+    return arr;
 }
 
 function getPoint(i) {
@@ -110,22 +145,62 @@ function getPoint(i) {
     } while (true);
 }
 
-function addPointMetadata(p) {
+function addPointMetadata(p, doArea) {
+    doArea = doArea === undefined;
     let distance = getDistance([0, 0], p) - radius;
     let angle = getAngle([0, 0], p);
-    return [roundTo(p[0], 0.5), roundTo(p[1], 0.5), roundTo(distance, .01), roundTo(angle, .01)];
+    if(doArea) {
+        let insideArea = getAreaInsideCircle(p);
+        return [p[0], p[1], distance, angle, insideArea];
+    }
+    return [p[0], p[1], distance, angle];
 }
 
+function getAreaInsideCircle(p) {
+    // As written, requires:
+    //   - Point is at angle > 0 and <= 45.
+    //   - The point data format of this program... Needs rewrite to work elsewhere.
+    let Area = 0;
+    let p1a = addPointMetadata([p[0] - 0.5, p[1] - 0.5], false);
+    let p2a = addPointMetadata([p[0] + 0.5, p[1] - 0.5], false);
+    let p1b = addPointMetadata([p1a[0], getTopCircleIntercept(p1a, radius, false)], false);
+    let p2b = addPointMetadata([p2a[0], getTopCircleIntercept(p2a, radius, false)], false);
+
+    if (p2a[2] < 0) {
+        // We know dist p1-p2 is 1. And, p2a-p2b is shorter than p1a-p1b. So area of rect
+        //   is just p2a[1] - p2b[1]
+        Area += Math.abs(p2a[1] - p2b[1]);
+    } else {
+        // Make p2b the horizontal intercept with the circle.
+        p2b = addPointMetadata(getTopCircleIntercept(p2a, radius, true), p2a[1], true);
+    }
+
+    Area += Math.abs((p2b[0] - p1b[0]) * (p1b[1] - p2b[1]) / 2);
+
+    // Ideally, add the area under the arc of the circle from p1b to p2b. But this is likely
+    //  near zero, so run as is for now.
+    return Area;
+}
+
+function getTopCircleIntercept(p, r, returnX) {
+    if (returnX) {
+        return Math.sqrt(Math.pow(r,2) - Math.pow(p[1],2));
+    } else {
+        return Math.sqrt(Math.pow(r,2) - Math.pow(p[0],2));
+    }
+}
 
 function getCircleHTML(circleArray) {
     // let longest = lengthLongestNumber(circleArray);
     let html = "<pre>";
     for (let i = 0; i < circleArray.length; i++) {
         html += ("" + i).padStart(3, "0") + ":" +
-            "  x: " + padNumber(circleArray[i][0], 1) +
-            "  y: " + padNumber(circleArray[i][1], 1) +
+            "  x: " + padNumber(circleArray[i][0], 1, 2) +
+            "  y: " + padNumber(circleArray[i][1], 1, 2) +
             "  d: " + padNumber(circleArray[i][2], 2) +
-            "  a: " + padNumber(circleArray[i][3], 2) + "<br />";
+            " an: " + padNumber(circleArray[i][3], 2, 4) +
+            " ar: " + padNumber(circleArray[i][4], 4, 1) +
+            "<br />";
 
 
         // html += "setblock " +
@@ -229,11 +304,11 @@ function drawGridCircle(circleArray) {
     drawGridArc(circleArray, 0, 360)
 }
 
-function drawGridArc(circleArray, startDegree, endDegree) {
-    startDegree = startDegree || 0;
-    endDegree = endDegree || 360;
-    let startPoint = [];
-    let endPoint = [];
+function drawGridArc(circleArray) {     //, startDegree, endDegree) {
+    // startDegree = startDegree || 0;
+    // endDegree = endDegree || 360;
+    // let startPoint = [];
+    // let endPoint = [];
 
     if (circleArray) {
         for (let i = 0; i < circleArray.length; i++) {
@@ -296,47 +371,16 @@ function roundTo(n, precision) {
     return n + precision / 2 - ((n + precision / 2) % precision);
 }
 
-function padNumber(n, digits) {
+function padNumber(n, digits, zeroes) {
+    zeroes = zeroes || 2;
     let lead = "";
     if (n >= 0) {
         lead = " ";
     }
-    return lead + n.toFixed(digits)
-}
-
-function getAreaInsideCircle(p) {
-    // As written, requires:
-    //   - Point is at angle > 0 and <= 45.
-    //   - The point data format of this program... Needs rewrite to work elsewhere.
-    let Area = 0;
-    p1a = addPointMetadata([p[0] - 0.5, p[1] - 0.5]);
-    p2a = addPointMetadata([p[0] + 0.5, p[1] - 0.5]);
-    p1b = addPointMetadata([p1a[0], getTopCircleIntercept(p1a, radius, false)]);
-    p2b = addPointMetadata([p2a[0], getTopCircleIntercept(p2a, radius, false)]);
-    if (p2a[2] < 0) {
-        // We know dist p1-p2 is 1. And, p2a-p2b is shorter than p1a-p1b. So area of rect
-        //   is just p2a[1] - p2b[1]
-        Area += p2a[1] - p2b[1];
-    } else {
-        // Make p2b the horizontal intercept with the circle.
-        p2b = addPointMetadata(getTopCircleIntercept(p2a, radius, true), p2a[1]);
-    }
-
-    Area += (p2b[0] - p1b[0]) * (p1b[1] - p1a[1]) / 2;
-
-    // Ideally, add the area under the arc of the circle from p1b to p2b. But this is likely
-    //  near zero, so run as is for now.
-    return Area;
+    return lead + n.toFixed(digits).padStart(zeroes,"0");
 }
 
 
-function getTopCircleIntercept(p, r, returnX) {
-    if (returnX) {
-        return Math.sqrt(Math.pow(r) - Math.pow(p[1]));
-    } else {
-        return Math.sqrt(Math.pow(r) - Math.pow(p[0]));
-    }
-}
 
 function closestToCircle(p1, p2, r, c, constraint) {
     const constraints = Object.freeze({"notOuside": -1, "notInside": 1});
