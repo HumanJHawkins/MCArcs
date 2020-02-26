@@ -1,5 +1,4 @@
 // To DO:
-// - Area not being calculated for squares where one lower point is above the circle.
 // - Area inside done. Just need to subtract from one to get area outside.
 //     Then produce inside and outside quality scores.
 
