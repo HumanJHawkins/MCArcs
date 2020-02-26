@@ -172,7 +172,7 @@ function getAreaInsideCircle(p) {
         Area += Math.abs(p2a[1] - p2b[1]);
     } else {
         // Make p2b the horizontal intercept with the circle.
-        p2b = addPointMetadata(getTopCircleIntercept(p2a, radius, true), p2a[1], true);
+        p2b = addPointMetadata([getTopCircleIntercept(p2a, radius, true), p2a[1]], false);
     }
 
     Area += Math.abs((p2b[0] - p1b[0]) * (p1b[1] - p2b[1]) / 2);
