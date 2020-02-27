@@ -1,6 +1,8 @@
 // To DO:
-// - Area inside done. Just need to subtract from one to get area outside.
-//     Then produce inside and outside quality scores.
+// - Area inside done. Should we store outside, or just calculate?
+// - Should we (and how should we) include unused grid squares data? I.e. Squares not used, but that have a piece
+//    of the circle running through them/
+// - Produce one or more circle quality metrics.
 
 let windowHeight;
 let windowWidth;
@@ -150,7 +152,7 @@ function addPointMetadata(p, doArea) {
     let angle = getAngle([0, 0], p);
     if(doArea) {
         let insideArea = getAreaInsideCircle(p);
-        return [p[0], p[1], distance, angle, insideArea];
+        return [p[0], p[1], distance, angle, insideArea, 1-insideArea];
     }
     return [p[0], p[1], distance, angle];
 }
@@ -232,11 +234,11 @@ function onDisplaySize() {
 
 function drawScreen() {
     drawCanvas();
-    drawGrid(theContext, gridSize, gridExtent, true, oddDiameter);
-    drawGridCircle(circleArray);
-
+    drawGrid(theContext, gridSize, gridExtent, oddDiameter);
     drawTargetCircle(); //   ???
     drawCenterSquare();
+    drawCenterPoint(theContext);
+    drawGridCircle(circleArray);
 }
 
 function drawCanvas() {
@@ -251,14 +253,12 @@ function drawCanvas() {
     theContext.lineWidth = 1.00;
 }
 
-function drawGrid(theContext, gridSize, gridExtent, drawCenterPoint, hasCenterSquare) {
+function drawGrid(theContext, gridSize, gridExtent, hasCenterSquare) {
     gridSize = gridSize || 20;
 
     let maxExtent = theContext.width;
     if(maxExtent < theContext.height) { maxExtent = theContext.height * 0.9 }
     gridExtent = gridExtent || maxExtent;
-
-    if(drawCenterPoint) { theContext.fillRect(-1, -1, 2, 2); }
 
     let gridStart = gridSize / 2;
     if (!hasCenterSquare) {
@@ -285,6 +285,10 @@ function drawGrid(theContext, gridSize, gridExtent, drawCenterPoint, hasCenterSq
         theContext.lineTo(-i, gridExtent);
     }
     theContext.stroke();
+}
+
+function drawCenterPoint(theContext) {
+    theContext.fillRect(-1, -1, 2, 2);
 }
 
 function drawTargetCircle() {
