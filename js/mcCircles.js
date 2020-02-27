@@ -232,8 +232,11 @@ function onDisplaySize() {
 
 function drawScreen() {
     drawCanvas();
-    drawGrid();
+    drawGrid(theContext, gridSize, gridExtent, true, oddDiameter);
     drawGridCircle(circleArray);
+
+    drawTargetCircle(); //   ???
+    drawCenterSquare();
 }
 
 function drawCanvas() {
@@ -248,11 +251,17 @@ function drawCanvas() {
     theContext.lineWidth = 1.00;
 }
 
-function drawGrid() {
-    theContext.fillRect(-1, -1, 2, 2);
-    let gridStart = gridSize / 2;
+function drawGrid(theContext, gridSize, gridExtent, drawCenterPoint, hasCenterSquare) {
+    gridSize = gridSize || 20;
 
-    if (!oddDiameter) {
+    let maxExtent = theContext.width;
+    if(maxExtent < theContext.height) { maxExtent = theContext.height * 0.9 }
+    gridExtent = gridExtent || maxExtent;
+
+    if(drawCenterPoint) { theContext.fillRect(-1, -1, 2, 2); }
+
+    let gridStart = gridSize / 2;
+    if (!hasCenterSquare) {
         theContext.strokeStyle = "#CCCCCC";
         theContext.beginPath();
         theContext.moveTo(-gridExtent, 0);
@@ -276,9 +285,6 @@ function drawGrid() {
         theContext.lineTo(-i, gridExtent);
     }
     theContext.stroke();
-
-    drawTargetCircle();
-    drawCenterSquare();
 }
 
 function drawTargetCircle() {
@@ -303,7 +309,8 @@ function drawGridCircle(circleArray) {
     drawGridArc(circleArray, 0, 360)
 }
 
-function drawGridArc(circleArray) {     //, startDegree, endDegree) {
+function drawGridArc(circleArray) {
+    //, startDegree, endDegree) {
     // startDegree = startDegree || 0;
     // endDegree = endDegree || 360;
     // let startPoint = [];
@@ -333,22 +340,6 @@ function squareAt(p, color) {
     theContext.stroke();
 }
 
-
-function rotatePoint(c, p, angle) {
-    let radians = (Math.PI / 180) * angle;
-    let cos = Math.cos(radians);
-    let sin = Math.sin(radians);
-    return [
-        (cos * (p[0] - c[0])) + (sin * (p[1] - c[1])) + c[0],
-        (cos * (p[1] - c[1])) - (sin * (p[0] - c[0])) + c[1]
-    ];
-}
-
-function rotatePointInt(c, p, angle) {
-    let n = rotatePoint(c, p, angle);
-    return [n[0], n[1]];
-}
-
 function getDistance(p1, p2) {
     return Math.sqrt(Math.pow(p2[0] - p1[0], 2) + Math.pow(p2[1] - p1[1], 2));
 }
@@ -362,13 +353,6 @@ function getAngle(c, p) {
     return angle;
 }
 
-function roundTo(n, precision) {
-    // precision is how precise the result will be. for rounding to the nearest 10, enter 10.
-    //   To the nearest .001, enter .001. Can also enter arbitrary intervals such as 3.
-    precision = precision || 1;
-    if (n < 0) precision *= -1;
-    return n + precision / 2 - ((n + precision / 2) % precision);
-}
 
 function padNumber(n, digits, zeroes) {
     zeroes = zeroes || 2;
@@ -379,59 +363,22 @@ function padNumber(n, digits, zeroes) {
     return lead + n.toFixed(digits).padStart(zeroes,"0");
 }
 
-
-
-function closestToCircle(p1, p2, r, c, constraint) {
-    const constraints = Object.freeze({"notOuside": -1, "notInside": 1});
-    c = c || [0, 0];
-    constraint = constraint || 0;
-
-    let dp1 = r - getDistance(c, p1);
-    let dp2 = r - getDistance(c, p2);
-    switch (constraint) {
-        case constraints.notOuside:
-            if (dp1 >= 0 && (dp2 < 0 || dp1 <= dp2)) return p1;
-            if (dp2 >= 0 && (dp1 < 0 || dp2 <= dp1)) return p2;
-            break;
-        case constraints.notInside:
-            if (dp1 <= 0 && (dp2 > 0 || dp1 >= dp2)) return p1;
-            if (dp2 <= 0 && (dp1 > 0 || dp2 >= dp1)) return p2;
-            break;
-        default:
-            if (Math.abs(dp1) <= Math.abs(dp2)) return p1; else return p2;
-    }
-
-    throw "Error: No point meets constraints in closestToCircle function.\n" +
-    "p1: " + p1.toString() + "\n" +
-    "p2: " + p2.toString() + "\n" +
-    "r : " + r + "\n" +
-    "c : " + c.toString() + "\n" +
-    "constraint: " + constraint + "\n" +
-    "dp1: " + dp1 + "\n" +
-    "dp2: " + dp2 + "\n"
+function roundTo(n, precision) {
+    // precision is how precise the result will be. for rounding to the nearest 10, enter 10.
+    //   To the nearest .001, enter .001. Can also enter arbitrary intervals such as 3.
+    precision = precision || 1;
+    if (n < 0) precision *= -1;
+    return n + precision / 2 - ((n + precision / 2) % precision);
 }
 
-
-function formatCoordinate(number, length) {
-    let result = "000000000" + Math.abs(number);
-    if (number < 0) {
-        result = "~-" + result.substr(result.length - (length - 1));
-    } else {
-        result = " ~" + result.substr(result.length - (length - 1));
-    }
-    return result;
-}
-
-function lengthLongestNumber(array2d) {
-    let longest = 0;
-    for (let i = 0; i < array2d.length; i++) {
-        for (let j = 0; j < array2d[i].length; j++) {
-            if (array2d[i][j].toString().length > longest) {
-                longest = array2d[i][j].toString().length;
-            }
-        }
-    }
-    return longest;
+function rotatePoint(c, p, angle) {
+    let radians = (Math.PI / 180) * angle;
+    let cos = Math.cos(radians);
+    let sin = Math.sin(radians);
+    return [
+        (cos * (p[0] - c[0])) + (sin * (p[1] - c[1])) + c[0],
+        (cos * (p[1] - c[1])) - (sin * (p[0] - c[0])) + c[1]
+    ];
 }
 
 function alertArray(arr2d) {
