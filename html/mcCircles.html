@@ -8,6 +8,22 @@
         body {
             font-family: "Courier New", monospace;
         }
+
+        @media (orientation:landscape) {
+            canvas {
+                float: left;
+            }
+        }
+
+
+        @media (orientation:portrait) {
+            canvas {
+                float: top;
+            }
+        }
+
+
+
     </style>
 </head>
 <body onload="validate()" onresize="validate()">

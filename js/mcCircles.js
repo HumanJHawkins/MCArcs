@@ -2,7 +2,10 @@
 // - Area inside done. Should we store outside, or just calculate?
 // - Should we (and how should we) include unused grid squares data? I.e. Squares not used, but that have a piece
 //    of the circle running through them/
-// - Produce one or more circle quality metrics.
+// - Produce one or more circle quality metrics...
+// - Add data for actual largest point to point outside dimension
+// - Add data for actual smallest point to point inside dimension
+
 
 let windowHeight;
 let windowWidth;
@@ -14,7 +17,7 @@ let drawAreaSize;
 let gridExtent;
 let gridSize;
 
-let circleArray;
+// let circleArray;
 let diameter;
 let radius;
 let oddDiameter;
@@ -40,8 +43,6 @@ function handleGridOffset() {
 }
 
 function newCircle() {
-    circleArray = getCircleArray();
-    document.getElementById("data").innerHTML = getCircleHTML(circleArray);
     onDisplaySize();
 }
 
@@ -238,7 +239,9 @@ function drawScreen() {
     drawTargetCircle(); //   ???
     drawCenterSquare();
     drawCenterPoint(theContext);
+    circleArray = getCircleArray();
     drawGridCircle(circleArray);
+    document.getElementById("data").innerHTML = getCircleHTML(circleArray);
 }
 
 function drawCanvas() {
