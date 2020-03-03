@@ -7,24 +7,26 @@
 // - Add data for actual smallest point to point inside dimension
 const pd =   //  Point data
     Object.freeze({
-        "x":0,
-        "y":1,
-        "distance":2,
-        "angle":3
+        "x": 0,
+        "y": 1,
+        "distance": 2,
+        "angle": 3
     });
 
 const sd =   //  Square data
     Object.freeze({
-        "x":pd.x,
-        "y":pd.y,
-        "distance":pd.distance,
-        "angle":pd.angle,
-        "areaIn":4,
-        "areaOut":5
+        "x": pd.x,
+        "y": pd.y,
+        "distance": pd.distance,
+        "angle": pd.angle,
+        "areaIn": 4,
+        "areaOut": 5,
+        "areaScore":6
     });
 
 const cd =   //  Circle data
     Object.freeze({
+        qDistance: 0,
         qInside: 1,
         qOutside: 2,
         qOverall: 3
@@ -40,11 +42,12 @@ let drawAreaSize;
 let gridExtent;
 let gridSize;
 
-// let circleArray;
 let diameter;
 let radius;
 let oddDiameter;
 let gridOffset;
+
+let circles = [];   //
 
 function validate() {
     let inputDiamater = document.getElementById("diameter").value;
@@ -101,17 +104,17 @@ function getCircleArray() {
 
 function mirror(arr, doXYO) {
     // doXYO is mirror across X, Y, or Origin
-    let last = arr.length-1;
+    let last = arr.length - 1;
     if (!oddDiameter) {
         for (let i = last; i >= 0; i--) {
-            arr[last+(last-i)+1] = mirrorPoint(arr[i], doXYO);
+            arr[last + (last - i) + 1] = mirrorPoint(arr[i], doXYO);
         }
     } else {
         // Kluge alert: Ugly, but works. Be careful messing with this
-        if(doXYO === "Y") arr[2*last] = mirrorPoint(arr[0], doXYO); // needed 1/4 of the time. Harmless the other 3.
+        if (doXYO === "Y") arr[2 * last] = mirrorPoint(arr[0], doXYO); // needed 1/4 of the time. Harmless the other 3.
         let j = 1;
-        for (let i = last-1; i > 0; i--) {
-            arr[last+j] = mirrorPoint(arr[i], doXYO);
+        for (let i = last - 1; i > 0; i--) {
+            arr[last + j] = mirrorPoint(arr[i], doXYO);
             j++;
         }
     }
@@ -132,7 +135,7 @@ function mirrorPoint(p, doXYO) {
             temp = mirrorPoint(mirrorPoint(temp, "X"), "Y");
     }
     // Update the angle. It is the only data that is different based on mirroring.
-    temp[pd.angle] = getAngle([0,0], temp);
+    temp[pd.angle] = getAngle([0, 0], temp);
     return temp;
 }
 
@@ -143,13 +146,18 @@ function transposeEighth(arr) {
     for (let i = 0; i <= last; i++) {
         arr[last + i + 1] =
             [arr[last - i][sd.y], arr[last - i][sd.x],
-             arr[last - i][sd.distance],
-             getAngle([0,0], [arr[last - i][sd.y], arr[last - i][sd.x]]), // updated angle
-             arr[last - i][sd.areaIn]];
+                arr[last - i][sd.distance],
+                getAngle([0, 0], [arr[last - i][sd.y], arr[last - i][sd.x]]), // updated angle
+                arr[last - i][sd.areaIn],
+                arr[last - i][sd.areaOut],
+                arr[last - i][sd.areaScore]
+            ];
     }
 
     // If our last element was at the 45, clean up the extra copy.
-    if(arr[last][sd.x] === arr[last][sd.y]) { arr.splice(last, 1); }
+    if (arr[last][sd.x] === arr[last][sd.y]) {
+        arr.splice(last, 1);
+    }
     return arr;
 }
 
@@ -174,9 +182,11 @@ function addPointMetadata(p, doArea) {
     doArea = doArea === undefined;
     let distance = getDistance([0, 0], p) - radius;
     let angle = getAngle([0, 0], p);
-    if(doArea) {
-        let insideArea = getAreaInsideCircle(p);
-        return [p[pd.x], p[pd.y], distance, angle, insideArea, 1-insideArea];
+    if (doArea) {
+        let areaIn = getAreaInsideCircle(p);
+        let areaOut = 1 - areaIn;
+        let areaScore = Math.abs(areaIn - areaOut);
+        return [p[pd.x], p[pd.y], distance, angle, areaIn, areaOut, areaScore];
     }
     return [p[pd.x], p[pd.y], distance, angle];
 }
@@ -209,9 +219,9 @@ function getAreaInsideCircle(p) {
 
 function getTopCircleIntercept(p, r, returnX) {
     if (returnX) {
-        return Math.sqrt(Math.pow(r,2) - Math.pow(p[pd.y],2));
+        return Math.sqrt(Math.pow(r, 2) - Math.pow(p[pd.y], 2));
     } else {
-        return Math.sqrt(Math.pow(r,2) - Math.pow(p[pd.x],2));
+        return Math.sqrt(Math.pow(r, 2) - Math.pow(p[pd.x], 2));
     }
 }
 
@@ -220,13 +230,14 @@ function getCircleHTML(circleArray) {
     let html = "<pre>";
     for (let i = 0; i < circleArray.length; i++) {
         html += ("" + i).padStart(3, "0") + ":" +
-            "  x: " + padNumber(circleArray[i][sd.x], 1, 2) +
-            "  y: " + padNumber(circleArray[i][sd.y], 1, 2) +
-            "  d: " + padNumber(circleArray[i][sd.distance], 2) +
-            " an: " + padNumber(circleArray[i][sd.angle], 2, 4) +
-            " ar: " + padNumber(circleArray[i][sd.areaIn], 4, 1) +
+            " (" + padNumber(circleArray[i][sd.x], 3, 2) +
+            "," + padNumber(circleArray[i][sd.y], 3, 2) +
+            ")&nbsp;&nbsp;&nbsp;&nbsp;dist: " + padNumber(circleArray[i][sd.distance], 0, 2) +
+            "&nbsp;&nbsp;&nbsp;&nbsp;angle: " + padNumber(circleArray[i][sd.angle], 3, 0) +
+            "&nbsp;&nbsp;&nbsp;&nbsp;area in: " + padNumber(circleArray[i][sd.areaIn], 0, 3) +
+            "&nbsp;&nbsp;&nbsp;&nbsp;area out: " + padNumber(circleArray[i][sd.areaOut], 0, 3) +
+            "&nbsp;&nbsp;&nbsp;&nbsp;score: " + padNumber(circleArray[i][sd.areaScore], 0, 3) +
             "<br />";
-
 
         // html += "setblock " +
         //     formatCoordinate(circleArray[i][[pd.x]], longest) +
@@ -236,6 +247,24 @@ function getCircleHTML(circleArray) {
     }
     html += "<br /></pre>";
     return html;
+}
+
+function padNumber(n, zeroes, digits) {
+    let isNegative = n < 0;
+    n = Math.abs(n);
+    let integerPart = Math.floor(n).toString().padStart(zeroes, "0");
+    let decimalPart = (n % 1).toFixed(digits).substring(1);
+    if (isNegative) integerPart = "-" + integerPart;
+    else integerPart = " " + integerPart;
+    return integerPart + decimalPart;
+}
+
+function roundTo(n, precision) {
+    // precision is how precise the result will be. for rounding to the nearest 10, enter 10.
+    //   To the nearest .001, enter .001. Can also enter arbitrary intervals such as 3.
+    precision = precision || 1;
+    if (n < 0) precision *= -1;
+    return n + precision / 2 - ((n + precision / 2) % precision);
 }
 
 
@@ -283,7 +312,9 @@ function drawGrid(theContext, gridSize, gridExtent, hasCenterSquare) {
     gridSize = gridSize || 20;
 
     let maxExtent = theContext.width;
-    if(maxExtent < theContext.height) { maxExtent = theContext.height * 0.9 }
+    if (maxExtent < theContext.height) {
+        maxExtent = theContext.height * 0.9
+    }
     gridExtent = gridExtent || maxExtent;
 
     let gridStart = gridSize / 2;
@@ -381,24 +412,6 @@ function getAngle(c, p) {
     let angle = Math.atan2(nx, ny) / Math.PI * 180;
     if (angle < 0) angle += 360;
     return angle;
-}
-
-
-function padNumber(n, digits, zeroes) {
-    zeroes = zeroes || 2;
-    let lead = "";
-    if (n >= 0) {
-        lead = " ";
-    }
-    return lead + n.toFixed(digits).padStart(zeroes,"0");
-}
-
-function roundTo(n, precision) {
-    // precision is how precise the result will be. for rounding to the nearest 10, enter 10.
-    //   To the nearest .001, enter .001. Can also enter arbitrary intervals such as 3.
-    precision = precision || 1;
-    if (n < 0) precision *= -1;
-    return n + precision / 2 - ((n + precision / 2) % precision);
 }
 
 function rotatePoint(c, p, angle) {
