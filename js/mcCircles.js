@@ -5,7 +5,30 @@
 // - Produce one or more circle quality metrics...
 // - Add data for actual largest point to point outside dimension
 // - Add data for actual smallest point to point inside dimension
+const pd =   //  Point data
+    Object.freeze({
+        "x":0,
+        "y":1,
+        "distance":2,
+        "angle":3
+    });
 
+const sd =   //  Square data
+    Object.freeze({
+        "x":pd.x,
+        "y":pd.y,
+        "distance":pd.distance,
+        "angle":pd.angle,
+        "areaIn":4,
+        "areaOut":5
+    });
+
+const cd =   //  Circle data
+    Object.freeze({
+        qInside: 1,
+        qOutside: 2,
+        qOverall: 3
+    });
 
 let windowHeight;
 let windowWidth;
@@ -55,18 +78,18 @@ function getCircleArray() {
         currentPoint = addPointMetadata(getPoint(i));
         circleArray[i] = currentPoint;
         i++;
-    } while (currentPoint[3] < 45);
+    } while (currentPoint[pd.angle] < 45);
 
     // If the last y-value is more than one away from the second to last, increment y.
-    if (circleArray[i - 1][1] < circleArray[i - 2][1] - 1) {
-        circleArray[i - 1][1]++;
+    if (circleArray[i - 1][sd.y] < circleArray[i - 2][sd.y] - 1) {
+        circleArray[i - 1][sd.y]++;
         circleArray[i - 1] = addPointMetadata(circleArray[i - 1]);
     }
 
     // If the last two are straddling the 45 degree line,
     //   or the last element is at 45 degrees with the same y-value as the prior element, remove the last one.
-    if (circleArray[i - 1][2] === circleArray[i - 2][2] ||
-        (circleArray[i - 1][3] === 45 && circleArray[i - 1][1] === circleArray[i - 2][1])) {
+    if (circleArray[i - 1][sd.distance] === circleArray[i - 2][sd.distance] ||
+        (circleArray[i - 1][sd.angle] === 45 && circleArray[i - 1][sd.y] === circleArray[i - 2][sd.y])) {
         circleArray.pop();
     }
 
@@ -100,16 +123,16 @@ function mirrorPoint(p, doXYO) {
     let temp = p.slice(0);  // Make a copy, as it is an object passed by reference.
     switch (doXYO) {
         case "X":
-            temp[0] = -temp[0];
+            temp[pd.x] = -temp[pd.x];
             break;
         case "Y":
-            temp[1] = -temp[1];
+            temp[pd.y] = -temp[pd.y];
             break;
         case "O":
             temp = mirrorPoint(mirrorPoint(temp, "X"), "Y");
     }
     // Update the angle. It is the only data that is different based on mirroring.
-    temp[3] = getAngle([0,0], temp);
+    temp[pd.angle] = getAngle([0,0], temp);
     return temp;
 }
 
@@ -119,14 +142,14 @@ function transposeEighth(arr) {
     let last = arr.length - 1;
     for (let i = 0; i <= last; i++) {
         arr[last + i + 1] =
-            [arr[last - i][1], arr[last - i][0],
-             arr[last - i][2],
-             getAngle([0,0], [arr[last - i][1], arr[last - i][0]]), // updated angle
-             arr[last - i][4]];
+            [arr[last - i][sd.y], arr[last - i][sd.x],
+             arr[last - i][sd.distance],
+             getAngle([0,0], [arr[last - i][sd.y], arr[last - i][sd.x]]), // updated angle
+             arr[last - i][sd.areaIn]];
     }
 
     // If our last element was at the 45, clean up the extra copy.
-    if(arr[last][0] === arr[last][1]) { arr.splice(last, 1); }
+    if(arr[last][sd.x] === arr[last][sd.y]) { arr.splice(last, 1); }
     return arr;
 }
 
@@ -153,9 +176,9 @@ function addPointMetadata(p, doArea) {
     let angle = getAngle([0, 0], p);
     if(doArea) {
         let insideArea = getAreaInsideCircle(p);
-        return [p[0], p[1], distance, angle, insideArea, 1-insideArea];
+        return [p[pd.x], p[pd.y], distance, angle, insideArea, 1-insideArea];
     }
-    return [p[0], p[1], distance, angle];
+    return [p[pd.x], p[pd.y], distance, angle];
 }
 
 function getAreaInsideCircle(p) {
@@ -163,21 +186,21 @@ function getAreaInsideCircle(p) {
     //   - Point is at angle > 0 and <= 45.
     //   - The point data format of this program... Needs rewrite to work elsewhere.
     let Area = 0;
-    let p1a = addPointMetadata([p[0] - 0.5, p[1] - 0.5], false);
-    let p2a = addPointMetadata([p[0] + 0.5, p[1] - 0.5], false);
-    let p1b = addPointMetadata([p1a[0], getTopCircleIntercept(p1a, radius, false)], false);
-    let p2b = addPointMetadata([p2a[0], getTopCircleIntercept(p2a, radius, false)], false);
+    let p1a = addPointMetadata([p[pd.x] - 0.5, p[pd.y] - 0.5], false);
+    let p2a = addPointMetadata([p[pd.x] + 0.5, p[pd.y] - 0.5], false);
+    let p1b = addPointMetadata([p1a[pd.x], getTopCircleIntercept(p1a, radius, false)], false);
+    let p2b = addPointMetadata([p2a[pd.x], getTopCircleIntercept(p2a, radius, false)], false);
 
-    if (p2a[2] < 0) {
+    if (p2a[pd.distance] < 0) {
         // We know dist p1-p2 is 1. And, p2a-p2b is shorter than p1a-p1b. So area of rect
-        //   is just p2a[1] - p2b[1]
-        Area += Math.abs(p2a[1] - p2b[1]);
+        //   is just p2a[pd.y] - p2b[pd.y]
+        Area += Math.abs(p2a[pd.y] - p2b[pd.y]);
     } else {
         // Make p2b the horizontal intercept with the circle.
-        p2b = addPointMetadata([getTopCircleIntercept(p2a, radius, true), p2a[1]], false);
+        p2b = addPointMetadata([getTopCircleIntercept(p2a, radius, true), p2a[pd.y]], false);
     }
 
-    Area += Math.abs((p2b[0] - p1b[0]) * (p1b[1] - p2b[1]) / 2);
+    Area += Math.abs((p2b[pd.x] - p1b[pd.x]) * (p1b[pd.y] - p2b[pd.y]) / 2);
 
     // Ideally, add the area under the arc of the circle from p1b to p2b. But this is likely
     //  near zero, so run as is for now.
@@ -186,9 +209,9 @@ function getAreaInsideCircle(p) {
 
 function getTopCircleIntercept(p, r, returnX) {
     if (returnX) {
-        return Math.sqrt(Math.pow(r,2) - Math.pow(p[1],2));
+        return Math.sqrt(Math.pow(r,2) - Math.pow(p[pd.y],2));
     } else {
-        return Math.sqrt(Math.pow(r,2) - Math.pow(p[0],2));
+        return Math.sqrt(Math.pow(r,2) - Math.pow(p[pd.x],2));
     }
 }
 
@@ -197,18 +220,18 @@ function getCircleHTML(circleArray) {
     let html = "<pre>";
     for (let i = 0; i < circleArray.length; i++) {
         html += ("" + i).padStart(3, "0") + ":" +
-            "  x: " + padNumber(circleArray[i][0], 1, 2) +
-            "  y: " + padNumber(circleArray[i][1], 1, 2) +
-            "  d: " + padNumber(circleArray[i][2], 2) +
-            " an: " + padNumber(circleArray[i][3], 2, 4) +
-            " ar: " + padNumber(circleArray[i][4], 4, 1) +
+            "  x: " + padNumber(circleArray[i][sd.x], 1, 2) +
+            "  y: " + padNumber(circleArray[i][sd.y], 1, 2) +
+            "  d: " + padNumber(circleArray[i][sd.distance], 2) +
+            " an: " + padNumber(circleArray[i][sd.angle], 2, 4) +
+            " ar: " + padNumber(circleArray[i][sd.areaIn], 4, 1) +
             "<br />";
 
 
         // html += "setblock " +
-        //     formatCoordinate(circleArray[i][0], longest) +
+        //     formatCoordinate(circleArray[i][[pd.x]], longest) +
         //     " ~-1 " +
-        //     formatCoordinate(circleArray[i][1], longest) +
+        //     formatCoordinate(circleArray[i][pd.y], longest) +
         //     " minecraft:stone<br />";
     }
     html += "<br /></pre>";
@@ -334,27 +357,27 @@ function squareAt(p, color) {
     color = color || "black";
 
     let sizeAdjust = gridSize / 2;
-    p[0] *= gridSize;
-    p[1] *= -gridSize;
+    p[pd.x] *= gridSize;
+    p[pd.y] *= -gridSize;
 
     theContext.strokeStyle = color;
     theContext.beginPath();
-    theContext.moveTo(p[0] - sizeAdjust, p[1] - sizeAdjust);
-    theContext.lineTo(p[0] - sizeAdjust, p[1] + sizeAdjust);
-    theContext.lineTo(p[0] + sizeAdjust, p[1] + sizeAdjust);
-    theContext.lineTo(p[0] + sizeAdjust, p[1] - sizeAdjust);
-    theContext.lineTo(p[0] - sizeAdjust, p[1] - sizeAdjust);
+    theContext.moveTo(p[pd.x] - sizeAdjust, p[pd.y] - sizeAdjust);
+    theContext.lineTo(p[pd.x] - sizeAdjust, p[pd.y] + sizeAdjust);
+    theContext.lineTo(p[pd.x] + sizeAdjust, p[pd.y] + sizeAdjust);
+    theContext.lineTo(p[pd.x] + sizeAdjust, p[pd.y] - sizeAdjust);
+    theContext.lineTo(p[pd.x] - sizeAdjust, p[pd.y] - sizeAdjust);
     theContext.stroke();
 }
 
 function getDistance(p1, p2) {
-    return Math.sqrt(Math.pow(p2[0] - p1[0], 2) + Math.pow(p2[1] - p1[1], 2));
+    return Math.sqrt(Math.pow(p2[pd.x] - p1[pd.x], 2) + Math.pow(p2[pd.y] - p1[pd.y], 2));
 }
 
 
 function getAngle(c, p) {
-    let nx = p[0] - c[0];
-    let ny = p[1] - c[1];
+    let nx = p[pd.x] - c[pd.x];
+    let ny = p[pd.y] - c[pd.y];
     let angle = Math.atan2(nx, ny) / Math.PI * 180;
     if (angle < 0) angle += 360;
     return angle;
@@ -383,8 +406,8 @@ function rotatePoint(c, p, angle) {
     let cos = Math.cos(radians);
     let sin = Math.sin(radians);
     return [
-        (cos * (p[0] - c[0])) + (sin * (p[1] - c[1])) + c[0],
-        (cos * (p[1] - c[1])) - (sin * (p[0] - c[0])) + c[1]
+        (cos * (p[pd.x] - c[pd.x])) + (sin * (p[pd.y] - c[pd.y])) + c[pd.x],
+        (cos * (p[pd.y] - c[pd.y])) - (sin * (p[pd.x] - c[pd.x])) + c[pd.y]
     ];
 }
 
