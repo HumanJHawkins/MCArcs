@@ -214,6 +214,21 @@ function getAreaInsideCircle(p) {
 
     // Ideally, add the area under the arc of the circle from p1b to p2b. But this is likely
     //  near zero, so run as is for now.
+    // Area of the segment of a circle is the area of the sector, minus the area of the isosceles triangle △ACB.
+    //
+    // r^2/2(Pi/180 * centralAngle - sin(centralAngle))
+
+    let centralAngle = p2b[pd.angle] - p1b[pd.angle];
+    let sectorArea = centralAngle * Math.PI / 360 * Math.pow(radius,2);
+    // let arcLength = centralAngle *  Math.PI / 180  * radius;
+    let segmentArea = (centralAngle * Math.PI / 360 - Math.sin(centralAngle) / 2) * Math.pow(radius,2);
+
+    alert("centralAngle: " + centralAngle + "\n" +
+        "sectorArea" + sectorArea + "\n" +
+        "segmentArea" + segmentArea + "\n"
+    );
+    // Area += segmentArea;
+
     return Area;
 }
 
