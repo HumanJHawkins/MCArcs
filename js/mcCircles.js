@@ -1,10 +1,9 @@
 // To DO:
-// - Area inside done. Should we store outside, or just calculate?
 // - Should we (and how should we) include unused grid squares data? I.e. Squares not used, but that have a piece
-//    of the circle running through them/
-// - Produce one or more circle quality metrics...
+//    of the circle running through them.
 // - Add data for actual largest point to point outside dimension
 // - Add data for actual smallest point to point inside dimension
+
 const pd =   //  Point data
     Object.freeze({
         "x": 0,
@@ -19,9 +18,10 @@ const sd =   //  Square data
         "y": pd.y,
         "distance": pd.distance,
         "angle": pd.angle,
-        "areaIn": 4,
-        "areaOut": 5,
-        "areaScore":6
+        "arcDegrees":4,
+        "areaIn": 5,
+        "areaOut": 6,
+        "areaScore":7
     });
 
 const cd =   //  Circle data
@@ -148,7 +148,8 @@ function transposeEighth(arr) {
         arr[last + i + 1] =
             [arr[last - i][sd.y], arr[last - i][sd.x],
                 arr[last - i][sd.distance],
-                getAngle([0, 0], [arr[last - i][sd.y], arr[last - i][sd.x]]), // updated angle
+                getAngle([0, 0], [arr[last - i][sd.y], arr[last - i][sd.x]]), // updated angle,
+                arr[last - i][sd.arcDegrees],
                 arr[last - i][sd.areaIn],
                 arr[last - i][sd.areaOut],
                 arr[last - i][sd.areaScore]
@@ -183,21 +184,20 @@ function addPointMetadata(p, doArea) {
     doArea = doArea === undefined;
     let distance = getDistance([0, 0], p) - radius;
     let angle = getAngle([0, 0], p);
-    // let arcLength = getArcLength();
     if (doArea) {
-        let areaIn = getAreaInsideCircle(p);
+        let areaData = getAreaInsideCircle(p);
+        let areaIn = areaData[1];
         let areaOut = 1 - areaIn;
         let areaScore = Math.abs(areaIn - areaOut);
-        return [p[pd.x], p[pd.y], distance, angle, areaIn, areaOut, areaScore];
+        return [p[pd.x], p[pd.y], distance, angle, areaData[0], areaIn, areaOut, areaScore];
     }
     return [p[pd.x], p[pd.y], distance, angle];
 }
-
 function getAreaInsideCircle(p) {
     // As written, requires:
     //   - Point is at angle > 0 and <= 45.
     //   - The point data format of this program... Needs rewrite to work elsewhere.
-    let Area = 0;
+    let area = 0;
     let p1a = addPointMetadata([p[pd.x] - 0.5, p[pd.y] - 0.5], false);
     let p2a = addPointMetadata([p[pd.x] + 0.5, p[pd.y] - 0.5], false);
     let p1b = addPointMetadata([p1a[pd.x], getTopCircleIntercept(p1a, radius, false)], false);
@@ -206,7 +206,7 @@ function getAreaInsideCircle(p) {
     if (p2a[pd.distance] < 0) {
         // We know dist p1-p2 is 1. And, p2a-p2b is shorter than p1a-p1b. So area of rect
         //   is just p2a[pd.y] - p2b[pd.y]
-        Area += Math.abs(p2a[pd.y] - p2b[pd.y]);
+        area += Math.abs(p2a[pd.y] - p2b[pd.y]);
     } else {
         // No rectangle under the arc, so area still zero.
         // Make p2b the horizontal intercept with the circle.
@@ -214,16 +214,16 @@ function getAreaInsideCircle(p) {
     }
 
     // Add the area of the triangle formed by the two arc contact points and the appropriate p1 line point.
-    Area += Math.abs((p2b[pd.x] - p1b[pd.x]) * (p1b[pd.y] - p2b[pd.y]) / 2);
+    area += Math.abs((p2b[pd.x] - p1b[pd.x]) * (p1b[pd.y] - p2b[pd.y]) / 2);
 
     // Finally, add the area of the segment of the circle identified by p1b and p2b.
     // handle p1 points being to left of zero angle (first square of odd diameter circle).
     let p1bAngle = p1b[pd.angle];
     if(p1bAngle > 90) p1bAngle -= 360;
     let centralAngle = p2b[pd.angle] - p1bAngle;
-    Area += (centralAngle * Math.PI / 360 - Math.sin(centralAngle * Math.PI / 180) / 2) * Math.pow(radius,2);
+    area += (centralAngle * Math.PI / 360 - Math.sin(centralAngle * Math.PI / 180) / 2) * Math.pow(radius,2);
 
-    return Area;
+    return [centralAngle, area];
 }
 
 function getTopCircleIntercept(p, r, returnX) {
@@ -246,6 +246,7 @@ function getCircleHTML(circleArray) {
             "&nbsp;&nbsp;&nbsp;&nbsp;area in: " + padNumber(circleArray[i][sd.areaIn], 0, 3) +
             "&nbsp;&nbsp;&nbsp;&nbsp;area out: " + padNumber(circleArray[i][sd.areaOut], 0, 3) +
             "&nbsp;&nbsp;&nbsp;&nbsp;score: " + padNumber(circleArray[i][sd.areaScore], 0, 3) +
+            "&nbsp;&nbsp;&nbsp;&nbsp;arcDegrees: " + padNumber(circleArray[i][sd.arcDegrees], 0, 3) +
             "<br />";
 
         // html += "setblock " +
