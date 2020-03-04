@@ -26,10 +26,11 @@ const sd =   //  Square data
 
 const cd =   //  Circle data
     Object.freeze({
-        qDistance: 0,
-        qInside: 1,
-        qOutside: 2,
-        qOverall: 3
+        diameterNominal: 0,
+        scoreAreaIn: 1,
+        scoreAreaOut: 2,
+        scoreAreaOverall: 3,
+        scoreDistance: 4
     });
 
 let windowHeight;
@@ -47,7 +48,7 @@ let radius;
 let oddDiameter;
 let gridOffset;
 
-let circles = [];   //
+let circles = [];   // thro
 
 function validate() {
     let inputDiamater = document.getElementById("diameter").value;
@@ -259,6 +260,49 @@ function getCircleHTML(circleArray) {
     return html;
 }
 
+
+function getCircleDataHTML(circleData) {
+    // let longest = lengthLongestNumber(circleArray);
+    let html = "<pre>";
+    html += "Diameter: " + padNumber(circleData[cd.diameterNominal], 0, 3) +
+        "&nbsp;&nbsp;&nbsp; AreaIn: " + padNumber(circleData[cd.scoreAreaIn], 3, 3) +
+        "&nbsp;v&nbsp;&nbsp;AreaOut: " + padNumber(circleData[cd.scoreAreaOut], 3, 3) +
+        "&nbsp;&nbsp;&nbsp;AreaSummary: " + padNumber(circleData[cd.scoreAreaOverall], 3, 3) +
+        "&nbsp;&nbsp;&nbsp;Distance: " + padNumber(circleData[cd.scoreDistance], 3, 3) +
+            "<br />";
+
+    html += "<br /></pre>";
+    return html;
+}
+
+function getCircleData(circleArray){
+    let scoreAreaIn = 0, scoreAreaOut = 0, scoreAreaOverall = 0, scoreDistance = 0;
+    let diameterNominal = circleArray[0][1] * 2 +1;
+    let diameterIn = 0, diameterOut = 0;
+    let oddDiameter, lengthFirstEighth;
+    if(circleArray.length % 8 == 0) {
+        oddDiameter = false;
+        lengthFirstEighth =  circleArray.length / 8;
+    }
+    else {
+        oddDiameter = true ;
+        lengthFirstEighth = (circleArray.length - 4) / 8 + 1;
+    }
+
+    for(let i=0; i<lengthFirstEighth; i++) {
+        scoreAreaIn += circleArray[i][sd.areaIn];
+        scoreAreaOut += circleArray[i][sd.areaOut];
+        scoreAreaOverall += circleArray[i][sd.areaScore];
+        scoreDistance += circleArray[i][sd.distance];
+    }
+    scoreAreaIn /= lengthFirstEighth;
+    scoreAreaOut /= lengthFirstEighth;
+    scoreAreaOverall /= lengthFirstEighth;
+    scoreDistance /= lengthFirstEighth;
+
+    return [diameterNominal, scoreAreaIn, scoreAreaOut, scoreAreaOverall, scoreDistance];
+}
+
 function padNumber(n, zeroes, digits) {
     let isNegative = n < 0;
     n = Math.abs(n);
@@ -301,8 +345,10 @@ function drawScreen() {
     drawTargetCircle(); //   ???
     drawCenterSquare();
     drawCenterPoint(theContext);
-    circleArray = getCircleArray();
+    let circleArray = getCircleArray();
+    let circleData = getCircleData(circleArray);
     drawGridCircle(circleArray);
+    document.getElementById("circleData").innerHTML = getCircleDataHTML(circleData);
     document.getElementById("data").innerHTML = getCircleHTML(circleArray);
 }
 
