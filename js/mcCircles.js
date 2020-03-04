@@ -99,6 +99,7 @@ function getCircleArray() {
     circleArray = transposeEighth(circleArray);
     circleArray = mirror(circleArray, "Y");
     circleArray = mirror(circleArray, "X");
+
     return circleArray;
 }
 
@@ -182,6 +183,7 @@ function addPointMetadata(p, doArea) {
     doArea = doArea === undefined;
     let distance = getDistance([0, 0], p) - radius;
     let angle = getAngle([0, 0], p);
+    // let arcLength = getArcLength();
     if (doArea) {
         let areaIn = getAreaInsideCircle(p);
         let areaOut = 1 - areaIn;
@@ -206,28 +208,20 @@ function getAreaInsideCircle(p) {
         //   is just p2a[pd.y] - p2b[pd.y]
         Area += Math.abs(p2a[pd.y] - p2b[pd.y]);
     } else {
+        // No rectangle under the arc, so area still zero.
         // Make p2b the horizontal intercept with the circle.
         p2b = addPointMetadata([getTopCircleIntercept(p2a, radius, true), p2a[pd.y]], false);
     }
 
+    // Add the area of the triangle formed by the two arc contact points and the appropriate p1 line point.
     Area += Math.abs((p2b[pd.x] - p1b[pd.x]) * (p1b[pd.y] - p2b[pd.y]) / 2);
 
-    // Ideally, add the area under the arc of the circle from p1b to p2b. But this is likely
-    //  near zero, so run as is for now.
-    // Area of the segment of a circle is the area of the sector, minus the area of the isosceles triangle △ACB.
-    //
-    // r^2/2(Pi/180 * centralAngle - sin(centralAngle))
-
-    let centralAngle = p2b[pd.angle] - p1b[pd.angle];
-    let sectorArea = centralAngle * Math.PI / 360 * Math.pow(radius,2);
-    // let arcLength = centralAngle *  Math.PI / 180  * radius;
-    let segmentArea = (centralAngle * Math.PI / 360 - Math.sin(centralAngle) / 2) * Math.pow(radius,2);
-
-    alert("centralAngle: " + centralAngle + "\n" +
-        "sectorArea" + sectorArea + "\n" +
-        "segmentArea" + segmentArea + "\n"
-    );
-    // Area += segmentArea;
+    // Finally, add the area of the segment of the circle identified by p1b and p2b.
+    // handle p1 points being to left of zero angle (first square of odd diameter circle).
+    let p1bAngle = p1b[pd.angle];
+    if(p1bAngle > 90) p1bAngle -= 360;
+    let centralAngle = p2b[pd.angle] - p1bAngle;
+    Area += (centralAngle * Math.PI / 360 - Math.sin(centralAngle * Math.PI / 180) / 2) * Math.pow(radius,2);
 
     return Area;
 }
@@ -382,7 +376,7 @@ function drawCenterSquare() {
 }
 
 function drawGridCircle(circleArray) {
-    drawGridArc(circleArray, 0, 360)
+    drawGridArc(circleArray, 0, 360);
 }
 
 function drawGridArc(circleArray) {
@@ -399,8 +393,11 @@ function drawGridArc(circleArray) {
     }
 }
 
-function squareAt(p, color) {
+function squareAt(p_original, color) {
     color = color || "black";
+
+    // Don't modify the contents of the incoming original, which is a reference to the point object.
+    let p = [p_original[pd.x],p_original[pd.y]];
 
     let sizeAdjust = gridSize / 2;
     p[pd.x] *= gridSize;
